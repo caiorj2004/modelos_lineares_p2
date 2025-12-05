@@ -324,8 +324,8 @@ with col_diag:
     # Outros Pressupostos (Texto)
     st.markdown("""
     **Outros Pressupostos Diagnosticados (Sem Gráfico):**
-    - **Independência dos Erros:** O **Teste Durbin-Watson** resultou em $\mathbf{\approx 2.00}$, indicando a **ausência de autocorrelação** (erros independentes).
-    - **Normalidade/Outliers:** A análise de $\mathbf{DFFITS/DFBETAS}$ mostrou que $\mathbf{99\%}$ dos *outliers* não exercem influência indevida.
+    - **Independência dos Erros:** O **Teste Durbin-Watson** resultou em um valor próximo de 2, indicando a **ausência de autocorrelação** (erros independentes).
+    - **Normalidade/Outliers:** A análise de DFFITS e DFBETAS mostrou que 99% dos *outliers* não exercem influência indevida.
     """)
     
     # Curva ROC - Fixo para comparação
@@ -397,7 +397,7 @@ predicted_mt = (
 
 with col_input2:
     st.markdown("##### Resultado da Predição")
-    st.success(f"A Nota de Matemática ($\text{{NOTA\_MT}}$) Prevista é:")
+    st.success(f"A Nota de Matemática Prevista é:")
     st.metric(label="NOTA MT PREVISTA", value=f"{predicted_mt:.2f}")
 
     st.markdown(r"""
