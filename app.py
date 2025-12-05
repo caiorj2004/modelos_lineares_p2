@@ -135,8 +135,10 @@ def load_and_process_data():
         vif_data["VIF"] = [variance_inflation_factor(df_X_no_const.values, i) for i in range(df_X_no_const.shape[1])]
         return vif_data
     
-    vif_m1_max = calculate_vif_train(X1_train_const)['VIF'].max()
-    vif_m2_max = calculate_vif_train(X2_train_const)['VIF'].max()
+    vif_m1_df = calculate_vif_train(X1_train_const)
+    vif_m2_df = calculate_vif_train(X2_train_const)
+    vif_m1_max = vif_m1_df['VIF'].max()
+    vif_m2_max = vif_m2_df['VIF'].max()
 
     # 6. Comparação Final (Tabela)
     comparison_data = {
@@ -305,16 +307,18 @@ with col_input1:
     ch_input = st.number_input("Nota Ciências Humanas (CH)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
     redacao_input = st.number_input("Nota Redação", min_value=0.0, max_value=1000.0, value=600.0, step=10.0)
 
-# Construir DataFrame de Input
+# Construir DataFrame de Input e GARANTIR A ORDEM CORRETA DAS COLUNAS
 input_data = pd.DataFrame({
     'NOTA_CN_CIENCIAS_DA_NATUREZA': [cn_input],
     'NOTA_CH_CIENCIAS_HUMANAS': [ch_input],
     'NOTA_REDACAO': [redacao_input]
 })
+# Garantir a ordem exata do MODEL1_NAMES
+input_data = input_data[MODEL1_NAMES]
 
 # Adicionar Intercepto e Fazer Predição
-# model1_func é o modelo treinado que possui os coeficientes
 input_data_const = sm.add_constant(input_data, prepend=True)
+# O uso de .predict() no statsmodels espera que as colunas estejam na ordem correta
 predicted_mt = model1_func.predict(input_data_const)[0]
 
 with col_input2:
@@ -323,7 +327,7 @@ with col_input2:
     st.metric(label="NOTA MT PREVISTA", value=f"{predicted_mt:.2f}")
 
     st.markdown(r"""
-    A previsão é calculada diretamente pela equação de regressão do Modelo 1. O erro médio desta estimativa (RMSE) é de **16.84 pontos**.
+    A previsão é calculada diretamente pela equação de regressão do Modelo 1. O erro médio desta estimativa ($\mathbf{RMSE}$) é de **16.84 pontos**.
     """)
 
 st.markdown("---")
@@ -395,7 +399,7 @@ with col_coefs:
     1. **Heterocedasticidade (Correção de Inferência):**
        - **Problema:** Erros Padrão viesados, invalidando os $\text{p-valores}$.
        - **Solução:** Utilizou-se o $\mathbf{Estimador Robusto (HC3)}$, resultando nos $\text{Erros Padrão}$ e $\text{p-valores}$ corrigidos acima. Isso **restaura a validade da Inferência** sobre a significância dos preditores.
-    2. **Multicolinearidade Severa (VIF $\mathbf{\approx 300}$):**
+    2. **Multicolinearidade Severa:** ($\mathbf{{VIF \approx 300}}$)
        - **Problema:** Instabilidade e alta variância dos $\mathbf{\hat{\beta}}$, devido à alta correlação entre as notas.
        - **Solução (Estratégia):** O MQO foi mantido devido ao seu $\mathbf{RMSE}$ superior ao da Regressão Ridge. O modelo deve ser usado **apenas para Previsão**, pois a instabilidade impede a **interpretação causal e isolada** do $\mathbf{\hat{\beta}}$ de cada nota.
     """)
