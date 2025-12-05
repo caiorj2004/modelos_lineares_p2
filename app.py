@@ -234,7 +234,7 @@ if results is None:
 
 st.header("1. Contexto da Atividade e Fundamentos")
 st.markdown("""
-Esta atividade visa construir e comparar dois modelos de Regressão Linear Múltipla para prever a $\mathbf{NOTA\_MT\_MATEMATICA}$ ($\mathbf{Y}$) de estudantes do ENEM, a partir de outras notas ($\mathbf{X}$), utilizando um rigor estatístico baseado nas boas práticas de *Machine Learning*).
+Esta atividade visa construir e comparar dois modelos de Regressão Linear Múltipla para prever a $\mathbf{NOTA\_MT\_MATEMATICA}$ ($\mathbf{Y}$) de estudantes do ENEM, a partir de outras notas ($\mathbf{X}$), utilizando um rigor estatístico baseado nas boas práticas de *Machine Learning*.
 """)
 
 st.subheader("O que são Modelos Lineares (MQO)?")
@@ -294,49 +294,10 @@ with col_comp2:
 st.markdown("---")
 
 # --------------------------------------------------------------------------
-# --- NOVA SEÇÃO 3: APLICAÇÃO E PREDIÇÃO ---
+# --- SEÇÃO 3: DIAGNÓSTICO E VALIDAÇÃO MATRICIAL ---
 # --------------------------------------------------------------------------
 
-st.header("3. Aplicação do Modelo Vencedor (Predição)")
-st.markdown("Utilize o Modelo 1 ($\text{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}$) para estimar a nota de Matemática ($\text{NOTA\_MT}$) com base nas notas fornecidas.")
-
-col_input1, col_input2 = st.columns([1, 1])
-
-# Campos de Input
-with col_input1:
-    st.markdown("##### Insira as Notas do Aluno:")
-    cn_input = st.number_input("Nota Ciências da Natureza (CN)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
-    ch_input = st.number_input("Nota Ciências Humanas (CH)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
-    redacao_input = st.number_input("Nota Redação", min_value=0.0, max_value=1000.0, value=600.0, step=10.0)
-
-# --- NOVA LÓGICA DE PREDIÇÃO ALGEBRICA ---
-# 1. Obter os coeficientes do modelo treinado
-params = model1_func.params
-
-# 2. Calcular a previsão usando a fórmula algébrica (imune ao reindex)
-predicted_mt = (
-    params['const'] +
-    params['NOTA_CN_CIENCIAS_DA_NATUREZA'] * cn_input +
-    params['NOTA_CH_CIENCIAS_HUMANAS'] * ch_input +
-    params['NOTA_REDACAO'] * redacao_input
-)
-
-with col_input2:
-    st.markdown("##### Resultado da Predição")
-    st.success(f"A Nota de Matemática ($\text{{NOTA\_MT}}$) Prevista é:")
-    st.metric(label="NOTA MT PREVISTA", value=f"{predicted_mt:.2f}")
-
-    st.markdown(r"""
-    A previsão foi calculada diretamente pela fórmula $\mathbf{\hat{Y} = \mathbf{\hat{\beta}_0} + \mathbf{\hat{\beta}_1}X_1 + \dots}$, utilizando os coeficientes extraídos do modelo treinado. O erro médio desta estimativa ($\mathbf{RMSE}$) é de **16.84 pontos**.
-    """)
-
-st.markdown("---")
-
-# --------------------------------------------------------------------------
-# --- SEÇÃO 4: DIAGNÓSTICO E VALIDAÇÃO MATRICIAL ---
-# --------------------------------------------------------------------------
-
-st.header("4. Diagnóstico e Implicações Estatísticas")
+st.header("3. Diagnóstico e Implicações Estatísticas")
 
 col_diag, col_coefs = st.columns(2)
 
@@ -402,4 +363,43 @@ with col_coefs:
     2. **Multicolinearidade Severa:** ($\mathbf{{VIF \approx 300}}$)
        - **Problema:** Instabilidade e alta variância dos $\mathbf{\hat{\beta}}$, devido à alta correlação entre as notas.
        - **Solução (Estratégia):** O MQO foi mantido devido ao seu $\mathbf{RMSE}$ superior ao da Regressão Ridge. O modelo deve ser usado **apenas para Previsão**, pois a instabilidade impede a **interpretação causal e isolada** do $\mathbf{\hat{\beta}}$ de cada nota.
+    """)
+
+st.markdown("---")
+
+# --------------------------------------------------------------------------
+# --- NOVA SEÇÃO 4: APLICAÇÃO E PREDIÇÃO ---
+# --------------------------------------------------------------------------
+
+st.header("4. Aplicação do Modelo Vencedor (Predição)")
+st.markdown("Utilize o Modelo 1 ($\text{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}$) para estimar a nota de Matemática ($\text{NOTA\_MT}$) com base nas notas fornecidas.")
+
+col_input1, col_input2 = st.columns([1, 1])
+
+# Campos de Input
+with col_input1:
+    st.markdown("##### Insira as Notas do Aluno:")
+    cn_input = st.number_input("Nota Ciências da Natureza (CN)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
+    ch_input = st.number_input("Nota Ciências Humanas (CH)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
+    redacao_input = st.number_input("Nota Redação", min_value=0.0, max_value=1000.0, value=600.0, step=10.0)
+
+# --- LÓGICA DE PREDIÇÃO ALGEBRICA ---
+# 1. Obter os coeficientes do modelo treinado
+params = model1_func.params
+
+# 2. Calcular a previsão usando a fórmula algébrica (imune ao reindex)
+predicted_mt = (
+    params['const'] +
+    params['NOTA_CN_CIENCIAS_DA_NATUREZA'] * cn_input +
+    params['NOTA_CH_CIENCIAS_HUMANAS'] * ch_input +
+    params['NOTA_REDACAO'] * redacao_input
+)
+
+with col_input2:
+    st.markdown("##### Resultado da Predição")
+    st.success(f"A Nota de Matemática ($\text{{NOTA\_MT}}$) Prevista é:")
+    st.metric(label="NOTA MT PREVISTA", value=f"{predicted_mt:.2f}")
+
+    st.markdown(r"""
+    A previsão foi calculada diretamente pela fórmula $\mathbf{\hat{Y} = \mathbf{\hat{\beta}_0} + \mathbf{\hat{\beta}_1}X_1 + \dots}$, utilizando os coeficientes extraídos do modelo treinado. O erro médio desta estimativa ($\mathbf{RMSE}$) é de **16.84 pontos**.
     """)
