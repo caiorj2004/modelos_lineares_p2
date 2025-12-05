@@ -361,6 +361,3 @@ with col_coefs:
        - **Problema:** Instabilidade e alta variância dos $\mathbf{\hat{\beta}}$, devido à alta correlação entre as notas.
        - **Solução (Estratégia):** O MQO foi mantido devido ao seu $\mathbf{RMSE}$ superior ao da Regressão Ridge. O modelo deve ser usado **apenas para Previsão**, pois a instabilidade impede a **interpretação causal e isolada** do $\mathbf{\hat{\beta}}$ de cada nota.
     """)
-
-st.markdown("---")
-st.info("✅ O projeto está concluído. A solução final é o Modelo 1 (OLS com Inferência Robusta HC3).")
