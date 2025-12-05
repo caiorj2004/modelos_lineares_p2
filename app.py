@@ -16,7 +16,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(layout="wide", page_title="Modelos Lineares ENEM P1 - Final")
+st.set_page_config(layout="wide", page_title="Modelos Lineares ENEM P2")
 
 # Variáveis Globais
 Y_NAME = 'NOTA_MT_MATEMATICA'
@@ -214,7 +214,7 @@ def generate_residual_plots(model_func, model_name):
 # --- ESTRUTURA DO STREAMLIT ---
 
 st.title("🎓 Modelos Lineares ENEM: Análise e Seleção de Modelos")
-st.markdown("### Atividade Avaliativa P1 - Álgebra Matricial vs. Python")
+st.markdown("### Atividade Avaliativa P2")
 st.markdown("---")
 
 # Carregar os dados processados (usando cache)
@@ -230,17 +230,16 @@ if results is None:
 
 st.header("1. Contexto da Atividade e Fundamentos")
 st.markdown("""
-Esta atividade visa construir e comparar dois modelos de Regressão Linear Múltipla para prever a $\mathbf{NOTA\_MT\_MATEMATICA}$ ($\mathbf{Y}$) de estudantes do ENEM, a partir de outras notas ($\mathbf{X}$), utilizando um rigor estatístico baseado na **Álgebra Matricial** e nas boas práticas de *Machine Learning* (uso de amostras de Treino e Teste).
+Esta atividade visa construir e comparar dois modelos de Regressão Linear Múltipla para prever a $\mathbf{NOTA\_MT\_MATEMATICA}$ ($\mathbf{Y}$) de estudantes do ENEM, a partir de outras notas ($\mathbf{X}$), utilizando um rigor estatístico baseado nas boas práticas de *Machine Learning*).
 """)
 
 st.subheader("O que são Modelos Lineares (MQO)?")
 st.markdown(r"""
 Modelos Lineares, estimados por Mínimos Quadrados Ordinários (MQO), buscam encontrar a reta ($\mathbf{\hat{\beta}}$) que minimiza a soma dos quadrados dos erros (resíduos) entre os valores observados e os valores previstos ($\mathbf{Y = X\beta + \epsilon}$). A solução matricial para os coeficientes é dada por:
-$$\mathbf{\hat{\beta}} = (\mathbf{X}^{\text{T}}\mathbf{X})^{-1}\mathbf{X}^{\text{T}}\mathbf{Y}$$
-A comprovação da equivalência entre a solução matricial e as funções do Python é um ponto central deste exercício.
+$$\mathbf{\hat{\beta}} = (\mathbf{X}^{\text{T}}\mathbf{X})^{-1}\mathbf{X}^{\text{T}}\mathbf{Y}$$.
 """)
 
-st.subheader("EDA - Análise de Correlação e Seleção de Variáveis (Etapas 1 e 2)")
+st.subheader("EDA - Análise de Correlação e Seleção de Variáveis")
 
 col_corr, col_corr_text = st.columns([1, 1])
 
@@ -266,7 +265,7 @@ st.header("2. Comparação Final e Seleção do Modelo")
 col_comp1, col_comp2 = st.columns([1.5, 1])
 
 with col_comp1:
-    st.subheader("Tabela de Performance (Roteiro 6)")
+    st.subheader("Tabela de Performance")
     st.markdown("Validação da estabilidade e generalização no conjunto de **Teste**.")
     
     st.dataframe(df_comparison.style.format('{:.4f}').highlight_min(
@@ -362,5 +361,3 @@ with col_coefs:
        - **Solução (Estratégia):** O MQO foi mantido devido ao seu $\mathbf{RMSE}$ superior ao da Regressão Ridge. O modelo deve ser usado **apenas para Previsão**, pois a instabilidade impede a **interpretação causal e isolada** do $\mathbf{\hat{\beta}}$ de cada nota.
     """)
 
-st.markdown("---")
-st.info("✅ O projeto está concluído. A solução final é o Modelo 1 (OLS com Inferência Robusta HC3).")
