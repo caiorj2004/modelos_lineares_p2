@@ -16,7 +16,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(layout="wide", page_title="Modelos Lineares ENEM P2 - Final")
+st.set_page_config(layout="wide", page_title="Modelos Lineares ENEM P1 - Final")
 
 # Variáveis Globais
 Y_NAME = 'NOTA_MT_MATEMATICA'
@@ -135,8 +135,10 @@ def load_and_process_data():
         vif_data["VIF"] = [variance_inflation_factor(df_X_no_const.values, i) for i in range(df_X_no_const.shape[1])]
         return vif_data
     
-    vif_m1_max = calculate_vif_train(X1_train_const)['VIF'].max()
-    vif_m2_max = calculate_vif_train(X2_train_const)['VIF'].max()
+    vif_m1_df = calculate_vif_train(X1_train_const)
+    vif_m2_df = calculate_vif_train(X2_train_const)
+    vif_m1_max = vif_m1_df['VIF'].max()
+    vif_m2_max = vif_m2_df['VIF'].max()
 
     # 6. Comparação Final (Tabela)
     comparison_data = {
@@ -199,6 +201,7 @@ def generate_residual_plots(model_func, model_name):
     
     return fig_resid, fig_qq
 
+
 # --- ESTRUTURA DO STREAMLIT ---
 
 st.title("🎓 Modelos Lineares ENEM: Análise e Seleção de Modelos")
@@ -208,7 +211,7 @@ st.markdown("---")
 # Carregar os dados processados (usando cache)
 results = load_and_process_data()
 if results is None:
-    st.error("Falha ao carregar e processar os dados. Verifique se o arquivo ENEM está no diretório correto.")
+    st.error("Falha ao carregar e processar os dados. Certifique-se de que o arquivo ENEM está no diretório correto e que as bibliotecas estão instaladas.")
     st.stop()
 (model1_func, model1_robust, model2_func, X1_train_const, X2_train_const, Y_train, Y_test_class, Y1_pred_test, Y2_pred_test, df_comparison, df_coefs_ols) = results
 
@@ -261,7 +264,7 @@ with col_comp2:
     st.subheader("Justificativa do Modelo Vencedor")
     st.markdown(f"""
     O **Modelo 1** ($\text{{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}}$) foi o vencedor em **todas** as métricas.
-    - **Predição:** Seu $\mathbf{{RMSE}}$ ($\mathbf{{ {df_comparison.loc['RMSE (Teste)']['Modelo 1 (Vencedor']:.4f} }}$) é o menor, indicando o menor erro de previsão no conjunto de teste.
+    - **Predição:** Seu $\mathbf{{RMSE}}$ ($\mathbf{{ {df_comparison.loc['RMSE (Teste)']['Modelo 1 (Vencedor)']:.4f} }}$) é o menor, indicando o menor erro de previsão no conjunto de teste.
     - **Parcimônia:** Embora seja mais complexo, o ganho de $\mathbf{{R^2}}$ fornecido pela $\text{{NOTA\_CH}}$ superou a penalidade de $\mathbf{{AIC/BIC}}$, garantindo que ele seja o modelo mais eficiente.
     - **Classificação:** O $\mathbf{{AUC}}$ de $\mathbf{{ {df_comparison.loc['Curva ROC/AUC']['Modelo 1 (Vencedor)']:.4f} }}$ demonstra uma capacidade de discriminação (acima/abaixo da média) quase perfeita.
     """)
@@ -294,7 +297,7 @@ with col_diag:
     st.caption("Resíduos vs. Ajustados: Dispersão em funil indica **Heterocedasticidade**.")
     
     st.pyplot(fig_qq)
-    st.caption("Q-Q Plot: Resíduos são aproximadamente normais no centro, satisfazendo a robustez para grandes amostras.")
+    st.caption("Q-Q Plot: Normalidade aproximada, com caudas pesadas (extremos).")
     
     # Curva ROC - Fixo para comparação
     auc1 = df_comparison.loc['Curva ROC/AUC', 'Modelo 1 (Vencedor)']
@@ -308,7 +311,7 @@ with col_coefs:
     st.subheader("Modelo Final e Validação Matricial")
     
     st.markdown("##### Coeficientes $\mathbf{\hat{\beta}}$: OLS vs. Matricial")
-    st.markdown(r"O cálculo matricial $\mathbf{\hat{\beta}} = (\mathbf{X}^{\text{T}}\mathbf{X})^{-1}\mathbf{X}^{\text{T}}\mathbf{Y}$ foi validado: os resultados são numericamente idênticos aos das funções Python.")
+    st.markdown(r"A equivalência prova a correção do Estimador de Mínimos Quadrados ($\mathbf{\hat{\beta}}$).")
     st.dataframe(df_coefs_ols.T.style.format('{:.6f}'), use_container_width=True)
     
     st.markdown("##### Implicações para o Modelo Vencedor (Modelo 1):")
@@ -326,5 +329,5 @@ with col_coefs:
     st.markdown(r"""
     **Ressalvas nas Violações:**
     1. **Heterocedasticidade:** Tratada ativamente. Os $\text{Erros Padrão (HC3)}$ corrigem a inconsistência e **validam a inferência** sobre a significância dos preditores.
-    2. **Multicolinearidade Severa:** ($\mathbf{{VIF \approx 300}}$) Não foi corrigida, mas a **predição** é válida. A instabilidade impede a **interpretação causal e isolada** dos coeficientes. O modelo é excelente para *prever*, mas não para *explicar* o impacto individual.
+    2. **Multicolinearidade Severa:** ($\mathbf{{VIF \approx 300}}$) O modelo é excelente para **Previsão**, mas a instabilidade impede a **interpretação causal e isolada** dos coeficientes. O $\text{VIF}$ alto é uma característica intrínseca do ENEM.
     """)
