@@ -32,7 +32,7 @@ MODEL1_NAMES = ['NOTA_CN_CIENCIAS_DA_NATUREZA', 'NOTA_CH_CIENCIAS_HUMANAS', 'NOT
 MODEL2_NAMES = ['NOTA_CN_CIENCIAS_DA_NATUREZA', 'NOTA_REDACAO']
 
 
-# --- FUNÇÕES DE ANÁLISE (Mantidas) ---
+# --- FUNÇÕES DE ANÁLISE ---
 
 def calculate_beta_hat_matricial(X, Y):
     """Calcula o vetor de coeficientes beta_hat usando álgebra matricial."""
@@ -100,8 +100,6 @@ def load_and_process_data():
 
     X1_train_const = sm.add_constant(X1_train)
     X2_train_const = sm.add_constant(X2_train)
-    X1_test_const = sm.add_constant(X1_test)
-    X2_test_const = sm.add_constant(X2_test)
 
     # 2. Fits dos Modelos
     model1_func = sm.OLS(Y_train, X1_train_const).fit()
@@ -111,6 +109,10 @@ def load_and_process_data():
     # 3. Métricas de Regressão e Parcimônia
     aic1, bic1 = model1_func.aic, model1_func.bic
     aic2, bic2 = model2_func.aic, model2_func.bic
+    
+    X1_test_const = sm.add_constant(X1_test)
+    X2_test_const = sm.add_constant(X2_test)
+
     rmse1 = np.sqrt(mean_squared_error(Y_test, model1_func.predict(X1_test_const)))
     rmse2 = np.sqrt(mean_squared_error(Y_test, model2_func.predict(X2_test_const)))
     
@@ -313,12 +315,11 @@ input_data = pd.DataFrame({
     'NOTA_CH_CIENCIAS_HUMANAS': [ch_input],
     'NOTA_REDACAO': [redacao_input]
 })
-# Garantir a ordem exata do MODEL1_NAMES
+# GARANTIR A ORDEM EXATA DOS PREDIOTRES E ADICIONAR CONSTANTE
 input_data = input_data[MODEL1_NAMES]
-
-# Adicionar Intercepto e Fazer Predição
 input_data_const = sm.add_constant(input_data, prepend=True)
-# O uso de .predict() no statsmodels espera que as colunas estejam na ordem correta
+
+# FAZER PREDIÇÃO
 predicted_mt = model1_func.predict(input_data_const)[0]
 
 with col_input2:
