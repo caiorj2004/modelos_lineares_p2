@@ -320,6 +320,7 @@ input_data = input_data[MODEL1_NAMES]
 
 # Adicionar Intercepto e FAZER PREDIÇÃO
 input_data_const = sm.add_constant(input_data, prepend=True)
+
 # CRÍTICO: Reindexar para garantir que as colunas 'const', 'NOTA_CN', 'NOTA_CH', 'NOTA_REDACAO'
 # estejam na mesma ordem que o modelo treinado (model1_func.params.index)
 TRAINING_COLUMNS = model1_func.params.index
