@@ -285,7 +285,7 @@ with col_comp1:
 with col_comp2:
     st.subheader("Modelo Vencedor e Justificativa")
     st.markdown(f"""
-    O **Modelo 1** ($\text{{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}}$) foi o vencedor em **todas** as métricas.
+    O **Modelo 1** ($\text{{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}}$) foi o vencedor em relação às métricas.
     - **Predição:** Seu $\mathbf{{RMSE}}$ ($\mathbf{{ {df_comparison.loc['RMSE (Teste)']['Modelo 1 (Vencedor)']:.4f} }}$) é o menor, indicando o menor erro de previsão no conjunto de teste.
     - **Parcimônia:** O ganho de $\mathbf{{R^2}}$ com as três notas mais do que compensa a complexidade (melhores $\mathbf{{AIC/BIC}}$).
     - **Generalização:** O $\mathbf{{AUC}}$ de $\mathbf{{ {df_comparison.loc['Curva ROC/AUC']['Modelo 1 (Vencedor)']:.4f} }}$ e o **RMSE K-fold** (estabilidade) confirmam a robustez do Modelo 1.
@@ -333,13 +333,13 @@ with col_diag:
     auc2 = df_comparison.loc['Curva ROC/AUC', 'Modelo 2 (Parcimonioso)']
     fig_roc = generate_roc_curve(Y_test_class, Y1_pred_test, Y2_pred_test, auc1, auc2)
     st.pyplot(fig_roc)
-    st.caption("Curva ROC: Validação do poder de discriminação do Modelo 1.")
+    st.caption("Curva ROC: Validação do poder de discriminação do Modelo.")
 
 
 with col_coefs:
     st.subheader("Modelo Final e Tratamento dos Pressupostos")
     
-    st.markdown("##### Coeficientes $\mathbf{\hat{\beta}}$: OLS vs. Matricial")
+    st.markdown("##### Coeficientes ($\mathbf{\hat{\beta}}$): OLS vs. Matricial")
     st.markdown(r"A equivalência prova a correção do Estimador de Mínimos Quadrados ($\mathbf{\hat{\beta}}$).")
     st.dataframe(df_coefs_ols.T.style.format('{:.6f}'), use_container_width=True)
     
