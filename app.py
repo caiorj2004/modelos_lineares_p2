@@ -339,7 +339,7 @@ with col_diag:
 with col_coefs:
     st.subheader("Modelo Final e Tratamento dos Pressupostos")
     
-    st.markdown("##### Coeficientes $$\mathbf{\hat{\beta}}: OLS vs. Matricial")
+    st.markdown("##### Coeficientes $$\mathbf{\hat{\beta}}$$: OLS vs. Matricial")
     st.markdown(r"A equivalência prova a correção do Estimador de Mínimos Quadrados ($\mathbf{\hat{\beta}}$).")
     st.dataframe(df_coefs_ols.T.style.format('{:.6f}'), use_container_width=True)
     
