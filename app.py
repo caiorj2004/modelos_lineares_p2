@@ -236,7 +236,7 @@ Esta atividade visa construir e comparar dois modelos de Regressão Linear Múlt
 st.subheader("O que são Modelos Lineares (MQO)?")
 st.markdown(r"""
 Modelos Lineares, estimados por Mínimos Quadrados Ordinários (MQO), buscam encontrar a reta ($\mathbf{\hat{\beta}}$) que minimiza a soma dos quadrados dos erros (resíduos) entre os valores observados e os valores previstos ($\mathbf{Y = X\beta + \epsilon}$). A solução matricial para os coeficientes é dada por:
-$$\mathbf{\hat{\beta}} = (\mathbf{X}^{\text{T}}\mathbf{X})^{-1}\mathbf{X}^{\text{T}}\mathbf{Y}$$.
+$$\mathbf{\hat{\beta}} = (\mathbf{X}^{\text{T}}\mathbf{X})^{-1}\mathbf{X}^{\text{T}}\mathbf{Y}$$
 """)
 
 st.subheader("EDA - Análise de Correlação e Seleção de Variáveis")
@@ -290,10 +290,49 @@ with col_comp2:
 st.markdown("---")
 
 # --------------------------------------------------------------------------
-# --- SEÇÃO 3: DIAGNÓSTICO E VALIDAÇÃO MATRICIAL ---
+# --- NOVA SEÇÃO 3: APLICAÇÃO E PREDIÇÃO ---
 # --------------------------------------------------------------------------
 
-st.header("3. Diagnóstico e Implicações Estatísticas")
+st.header("3. Aplicação do Modelo Vencedor (Predição)")
+st.markdown("Utilize o Modelo 1 ($\text{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}$) para estimar a nota de Matemática ($\text{NOTA\_MT}$) com base nas notas fornecidas.")
+
+col_input1, col_input2 = st.columns([1, 1])
+
+# Campos de Input
+with col_input1:
+    st.markdown("##### Insira as Notas do Aluno:")
+    cn_input = st.number_input("Nota Ciências da Natureza (CN)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
+    ch_input = st.number_input("Nota Ciências Humanas (CH)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
+    redacao_input = st.number_input("Nota Redação", min_value=0.0, max_value=1000.0, value=600.0, step=10.0)
+
+# Construir DataFrame de Input
+input_data = pd.DataFrame({
+    'NOTA_CN_CIENCIAS_DA_NATUREZA': [cn_input],
+    'NOTA_CH_CIENCIAS_HUMANAS': [ch_input],
+    'NOTA_REDACAO': [redacao_input]
+})
+
+# Adicionar Intercepto e Fazer Predição
+# model1_func é o modelo treinado que possui os coeficientes
+input_data_const = sm.add_constant(input_data, prepend=True)
+predicted_mt = model1_func.predict(input_data_const)[0]
+
+with col_input2:
+    st.markdown("##### Resultado da Predição")
+    st.success(f"A Nota de Matemática ($\text{{NOTA\_MT}}$) Prevista é:")
+    st.metric(label="NOTA MT PREVISTA", value=f"{predicted_mt:.2f}")
+
+    st.markdown(r"""
+    A previsão é calculada diretamente pela equação de regressão do Modelo 1. O erro médio desta estimativa (RMSE) é de **16.84 pontos**.
+    """)
+
+st.markdown("---")
+
+# --------------------------------------------------------------------------
+# --- SEÇÃO 4: DIAGNÓSTICO E VALIDAÇÃO MATRICIAL ---
+# --------------------------------------------------------------------------
+
+st.header("4. Diagnóstico e Implicações Estatísticas")
 
 col_diag, col_coefs = st.columns(2)
 
@@ -315,13 +354,13 @@ with col_diag:
     st.caption("Resíduos vs. Ajustados: Dispersão em funil indica **Heterocedasticidade** (violação do pressuposto).")
     
     st.pyplot(fig_qq)
-    st.caption("Q-Q Plot: A Normalidade dos Resíduos é robusta no centro para grandes amostras, apesar dos desvios nas caudas.")
+    st.caption("Q-Q Plot: Normalidade aproximada, com caudas pesadas (extremos).")
     
     # Outros Pressupostos (Texto)
     st.markdown("""
     **Outros Pressupostos Diagnosticados (Sem Gráfico):**
     - **Independência dos Erros:** O **Teste Durbin-Watson** resultou em $\mathbf{\approx 2.00}$, indicando a **ausência de autocorrelação** (erros independentes).
-    - **Normalidade/Outliers:** O $\mathbf{p\text{-valor}}$ do teste Omnibus e Jarque-Bera (não exibido) é $p < 0.001$, indicando formalmente a não-normalidade (devido às caudas pesadas), mas a análise dos $\mathbf{DFFITS/DFBETAS}$ mostrou que $\mathbf{99\%}$ dos *outliers* não exercem influência indevida.
+    - **Normalidade/Outliers:** A análise de $\mathbf{DFFITS/DFBETAS}$ mostrou que $\mathbf{99\%}$ dos *outliers* não exercem influência indevida.
     """)
     
     # Curva ROC - Fixo para comparação
@@ -361,3 +400,5 @@ with col_coefs:
        - **Solução (Estratégia):** O MQO foi mantido devido ao seu $\mathbf{RMSE}$ superior ao da Regressão Ridge. O modelo deve ser usado **apenas para Previsão**, pois a instabilidade impede a **interpretação causal e isolada** do $\mathbf{\hat{\beta}}$ de cada nota.
     """)
 
+st.markdown("---")
+st.info("✅ O projeto está concluído. A solução final é o Modelo 1 (OLS com Inferência Robusta HC3).")
