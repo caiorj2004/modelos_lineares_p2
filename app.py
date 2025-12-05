@@ -309,17 +309,22 @@ with col_input1:
     ch_input = st.number_input("Nota Ciências Humanas (CH)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
     redacao_input = st.number_input("Nota Redação", min_value=0.0, max_value=1000.0, value=600.0, step=10.0)
 
-# Construir DataFrame de Input e GARANTIR A ORDEM CORRETA DAS COLUNAS
+# Construir DataFrame de Input
 input_data = pd.DataFrame({
     'NOTA_CN_CIENCIAS_DA_NATUREZA': [cn_input],
     'NOTA_CH_CIENCIAS_HUMANAS': [ch_input],
     'NOTA_REDACAO': [redacao_input]
 })
-# GARANTIR A ORDEM EXATA DOS PREDIOTRES E ADICIONAR CONSTANTE
+# Garantir a ordem exata dos preditores
 input_data = input_data[MODEL1_NAMES]
-input_data_const = sm.add_constant(input_data, prepend=True)
 
-# FAZER PREDIÇÃO
+# Adicionar Intercepto e FAZER PREDIÇÃO
+input_data_const = sm.add_constant(input_data, prepend=True)
+# CRÍTICO: Reindexar para garantir que as colunas 'const', 'NOTA_CN', 'NOTA_CH', 'NOTA_REDACAO'
+# estejam na mesma ordem que o modelo treinado (model1_func.params.index)
+TRAINING_COLUMNS = model1_func.params.index
+input_data_const = input_data_const.reindex(columns=TRAINING_COLUMNS, fill_value=0)
+
 predicted_mt = model1_func.predict(input_data_const)[0]
 
 with col_input2:
