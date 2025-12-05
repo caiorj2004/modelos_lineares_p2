@@ -4,22 +4,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
-import statsmodels.stats.api as sms
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
-from sklearn.metrics import mean_squared_error, roc_auc_score, roc_curve, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import mean_squared_error, roc_auc_score, roc_curve, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
+import warnings
+
+# Suprimir avisos desnecessários do Statsmodels
+warnings.filterwarnings('ignore')
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(layout="wide", page_title="Modelos Lineares ENEM P1 - Final")
+st.set_page_config(layout="wide", page_title="Modelos Lineares ENEM P2 - Final")
 
 # Variáveis Globais
 Y_NAME = 'NOTA_MT_MATEMATICA'
 DATA_FILE = "Enem_2024_Amostra_Perfeita.xlsx"
 
-# Nomes das variáveis preditoras originais
 X_NAMES_CANDIDATES = [
     'NOTA_CN_CIENCIAS_DA_NATUREZA',
     'NOTA_CH_CIENCIAS_HUMANAS',
@@ -30,7 +32,7 @@ MODEL1_NAMES = ['NOTA_CN_CIENCIAS_DA_NATUREZA', 'NOTA_CH_CIENCIAS_HUMANAS', 'NOT
 MODEL2_NAMES = ['NOTA_CN_CIENCIAS_DA_NATUREZA', 'NOTA_REDACAO']
 
 
-# --- FUNÇÕES DE ANÁLISE REQUERIDAS PELO PIPELINE ---
+# --- FUNÇÕES DE ANÁLISE ---
 
 def calculate_beta_hat_matricial(X, Y):
     """Calcula o vetor de coeficientes beta_hat usando álgebra matricial."""
@@ -43,7 +45,6 @@ def calculate_metrics(Y_true, Y_scores, threshold):
     Y_pred = (Y_scores >= threshold).astype(int)
     cm = confusion_matrix(Y_true, Y_pred)
     
-    # Proteção contra erros de matriz de confusão incompleta
     if cm.size != 4:
         return None 
     tn, fp, fn, tp = cm.ravel()
@@ -86,8 +87,7 @@ def load_and_process_data():
     try:
         df = pd.read_excel(DATA_FILE)
     except FileNotFoundError:
-        st.error(f"Erro: Arquivo {DATA_FILE} não encontrado. Certifique-se de que ele está no mesmo diretório.")
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None, None, None
 
     # 1. Limpeza e Split
     df_model = df[[Y_NAME] + X_NAMES_CANDIDATES].dropna()
@@ -109,18 +109,11 @@ def load_and_process_data():
     model1_robust = sm.OLS(Y_train, X1_train_const).fit(cov_type='HC3') # Modelo de inferência final
 
     # 3. Métricas de Regressão e Parcimônia
-    
-    # AIC/BIC
     aic1, bic1 = model1_func.aic, model1_func.bic
     aic2, bic2 = model2_func.aic, model2_func.bic
-
-    # RMSE (Teste - Função)
-    Y1_pred_test = model1_func.predict(X1_test_const)
-    Y2_pred_test = model2_func.predict(X2_test_const)
-    rmse1 = np.sqrt(mean_squared_error(Y_test, Y1_pred_test))
-    rmse2 = np.sqrt(mean_squared_error(Y_test, Y2_pred_test))
-
-    # K-Fold RMSE
+    rmse1 = np.sqrt(mean_squared_error(Y_test, model1_func.predict(X1_test_const)))
+    rmse2 = np.sqrt(mean_squared_error(Y_test, model2_func.predict(X2_test_const)))
+    
     cv = KFold(n_splits=5, shuffle=True, random_state=42)
     mean_rmse1_kf = -cross_val_score(OLS_Wrapper(add_constant=True), X1_train, Y_train, scoring='neg_root_mean_squared_error', cv=cv).mean()
     mean_rmse2_kf = -cross_val_score(OLS_Wrapper(add_constant=True), X2_train, Y_train, scoring='neg_root_mean_squared_error', cv=cv).mean()
@@ -128,6 +121,9 @@ def load_and_process_data():
     # 4. Métricas de Classificação
     median_Y_train = Y_train.median()
     Y_test_class = (Y_test >= median_Y_train).astype(int)
+    
+    Y1_pred_test = model1_func.predict(X1_test_const)
+    Y2_pred_test = model2_func.predict(X2_test_const)
     metrics1 = calculate_metrics(Y_test_class, Y1_pred_test, median_Y_train)
     metrics2 = calculate_metrics(Y_test_class, Y2_pred_test, median_Y_train)
 
@@ -139,15 +135,14 @@ def load_and_process_data():
         vif_data["VIF"] = [variance_inflation_factor(df_X_no_const.values, i) for i in range(df_X_no_const.shape[1])]
         return vif_data
     
-    vif_m1 = calculate_vif_train(X1_train_const).set_index('feature').loc[MODEL1_NAMES[0]:].max().values[0]
-    vif_m2 = calculate_vif_train(X2_train_const).set_index('feature').loc[MODEL2_NAMES[0]:].max().values[0]
-
+    vif_m1_max = calculate_vif_train(X1_train_const)['VIF'].max()
+    vif_m2_max = calculate_vif_train(X2_train_const)['VIF'].max()
 
     # 6. Comparação Final (Tabela)
     comparison_data = {
         'Métrica': ['RMSE (Teste)', 'AIC', 'BIC', 'RMSE K-fold', 'Curva ROC/AUC', 'F1 Score', 'Acurácia', 'VIF Máximo'],
-        'Modelo 1 (Vencedor)': [rmse1, aic1, bic1, mean_rmse1_kf, metrics1['Curva ROC/AUC'], metrics1['F1 Score'], metrics1['Acurácia'], vif_m1],
-        'Modelo 2 (Parcimonioso)': [rmse2, aic2, bic2, mean_rmse2_kf, metrics2['Curva ROC/AUC'], metrics2['F1 Score'], metrics2['Acurácia'], vif_m2]
+        'Modelo 1 (Vencedor)': [rmse1, aic1, bic1, mean_rmse1_kf, metrics1['Curva ROC/AUC'], metrics1['F1 Score'], metrics1['Acurácia'], vif_m1_max],
+        'Modelo 2 (Parcimonioso)': [rmse2, aic2, bic2, mean_rmse2_kf, metrics2['Curva ROC/AUC'], metrics2['F1 Score'], metrics2['Acurácia'], vif_m2_max]
     }
     df_comparison = pd.DataFrame(comparison_data).set_index('Métrica')
 
@@ -163,8 +158,7 @@ def load_and_process_data():
     }
     df_coefs_ols = pd.DataFrame(coefs_ols).set_index('Modelo')
     
-    
-    return model1_func, model1_robust, X1_train_const, Y_train, Y_test_class, Y1_pred_test, Y2_pred_test, df_comparison, df_coefs_ols
+    return model1_func, model1_robust, model2_func, X1_train_const, X2_train_const, Y_train, Y_test_class, Y1_pred_test, Y2_pred_test, df_comparison, df_coefs_ols
 
 
 # --- GERAÇÃO DE GRÁFICOS (CHAMADA APENAS NO STREAMLIT) ---
@@ -185,7 +179,7 @@ def generate_roc_curve(Y_true, Y1_scores, Y2_scores, auc1, auc2):
     ax.grid(True)
     return fig
 
-def generate_residual_plots(model_func, Y_train):
+def generate_residual_plots(model_func, model_name):
     """Gera os gráficos de Resíduos vs. Ajustados e Q-Q Plot."""
     resid = model_func.resid
     fitted = model_func.fittedvalues
@@ -194,17 +188,16 @@ def generate_residual_plots(model_func, Y_train):
     fig_resid, ax_resid = plt.subplots(figsize=(8, 5))
     sns.scatterplot(x=fitted, y=resid, alpha=0.3, ax=ax_resid)
     ax_resid.axhline(0, color='red', linestyle='--')
-    ax_resid.set_title('Linearidade e Homocedasticidade')
+    ax_resid.set_title(f'Linearidade e Homocedasticidade ({model_name})')
     ax_resid.set_xlabel('Valores Ajustados')
     ax_resid.set_ylabel('Resíduos')
 
     # Q-Q Plot
     fig_qq, ax_qq = plt.subplots(figsize=(6, 6))
     sm.qqplot(resid, line='s', fit=True, ax=ax_qq)
-    ax_qq.set_title('Normalidade dos Resíduos (Q-Q Plot)')
+    ax_qq.set_title(f'Normalidade dos Resíduos ({model_name})')
     
     return fig_resid, fig_qq
-
 
 # --- ESTRUTURA DO STREAMLIT ---
 
@@ -213,67 +206,65 @@ st.markdown("### Atividade Avaliativa P1 - Álgebra Matricial vs. Python")
 st.markdown("---")
 
 # Carregar os dados processados (usando cache)
-(model1_func, model1_robust, X1_train_const, Y_train, Y_test_class, 
- Y1_pred_test, Y2_pred_test, df_comparison, df_coefs_ols) = load_and_process_data()
-
-if df_comparison is None:
+results = load_and_process_data()
+if results is None:
+    st.error("Falha ao carregar e processar os dados. Verifique se o arquivo ENEM está no diretório correto.")
     st.stop()
-
+(model1_func, model1_robust, model2_func, X1_train_const, X2_train_const, Y_train, Y_test_class, Y1_pred_test, Y2_pred_test, df_comparison, df_coefs_ols) = results
 
 # --------------------------------------------------------------------------
-# --- SEÇÃO 1: SELEÇÃO FINAL E INFERÊNCIA ---
+# --- INTRODUÇÃO E CONTEXTO ---
 # --------------------------------------------------------------------------
 
-st.header("1. Modelo Vencedor e Resultados Finais")
-st.markdown(f"""
-O modelo selecionado é o **Modelo 1** ($\text{{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}}$), que demonstrou a melhor performance preditiva e estabilidade ($\mathbf{{RMSE}}={df_comparison.loc['RMSE (Teste)']['Modelo 1 (Vencedor)']:.4f}$).
+st.header("1. Contexto da Atividade e Fundamentos")
+st.markdown("""
+Esta atividade visa construir e comparar dois modelos de Regressão Linear Múltipla para prever a $\mathbf{NOTA\_MT\_MATEMATICA}$ ($\mathbf{Y}$) de estudantes do ENEM, a partir de outras notas ($\mathbf{X}$), utilizando um rigor estatístico baseado na **Álgebra Matricial** e nas boas práticas de *Machine Learning* (uso de amostras de Treino e Teste).
 """)
 
-st.subheader("Modelo Final de Inferência (Corrigido para Heterocedasticidade)")
+st.subheader("O que são Modelos Lineares (MQO)?")
+st.markdown(r"""
+Modelos Lineares, estimados por Mínimos Quadrados Ordinários (MQO), buscam encontrar a reta ($\mathbf{\hat{\beta}}$) que minimiza a soma dos quadrados dos erros (resíduos) entre os valores observados e os valores previstos ($\mathbf{Y = X\beta + \epsilon}$). A solução matricial para os coeficientes é dada por:
+$$\mathbf{\hat{\beta}} = (\mathbf{X}^{\text{T}}\mathbf{X})^{-1}\mathbf{X}^{\text{T}}\mathbf{Y}$$
+O exercício comprovou a equivalência dessa solução matricial com as funções do Python.
+""")
 
-st.latex(r'''
-\mathbf{\hat{Y}_{\text{MT}}} = -0.7020 + 0.3535 \cdot \text{NOTA\_CN} + 0.3194 \cdot \text{NOTA\_CH} + 0.3313 \cdot \text{NOTA\_REDACAO}
-''')
-
-st.dataframe(pd.DataFrame({
-    'Variável': model1_robust.params.index,
-    'Coeficiente (β̂)': model1_robust.params.values,
-    'Erro Padrão (HC3)': model1_robust.bse.values,
-    'P-valor (Corrigido)': model1_robust.pvalues.values
-}).style.format({
-    'Coeficiente (β̂)': '{:.4f}',
-    'Erro Padrão (HC3)': '{:.4f}',
-    'P-valor (Corrigido)': '{:.4e}'
-}), hide_index=True, use_container_width=True)
-
-with st.expander("⚠️ Consequências da Multicolinearidade e Heterocedasticidade"):
-    st.markdown("""
-    - **Heterocedasticidade (Tratada):** Os Erros Padrão acima são **Robustos (HC3)**. Isso corrige a inconsistência dos $\text{p-valores}$ e garante a **validade estatística da Inferência** sobre a significância dos preditores.
-    - **Multicolinearidade ($\mathbf{VIF \approx 300}$):** O modelo é excelente para **Previsão** ($\mathbf{\hat{Y}}$), mas o alto $\text{VIF}$ implica que a **Interpretabilidade** dos coeficientes individuais ($\mathbf{\hat{\beta}}$) é instável e não confiável.
-    """)
+st.subheader("EDA - Análise de Correlação (Etapa 1)")
+st.markdown("""
+A Análise Exploratória (EDA) inicial, realizada no conjunto de Treino, confirmou a **forte correlação positiva** entre a $\text{NOTA\_MT}$ e as demais notas. Essa alta correlação foi a base para a seleção das variáveis, mas também a causa direta da **Multicolinearidade Severa** observada no diagnóstico (VIF $\gg 100$).
+""")
 
 st.markdown("---")
 
 # --------------------------------------------------------------------------
-# --- SEÇÃO 2: TABELA DE COMPARAÇÃO (PIPELINE) ---
+# --- SEÇÃO 2: SELEÇÃO, COMPARAÇÃO E JUSTIFICATIVA FINAL ---
 # --------------------------------------------------------------------------
 
-st.header("2. Comparação de Modelos (Pipeline - Roteiro 6)")
-st.markdown("Validação da estabilidade e generalização no conjunto de **Teste**.")
+st.header("2. Seleção e Comparação dos Modelos (Etapas 5 e 6)")
 
-# Customização da Tabela de Comparação
-df_display = df_comparison.copy()
-df_display = df_display.style.format('{:.4f}')
+col_comp1, col_comp2 = st.columns([1.5, 1])
 
-st.dataframe(df_display.highlight_min(
-    axis=1, 
-    subset=pd.IndexSlice[['RMSE (Teste)', 'AIC', 'BIC', 'RMSE K-fold'], :], 
-    props='background-color: #d4edda;' # Verde claro para vencedor (menor)
-).highlight_max(
-    axis=1,
-    subset=pd.IndexSlice[['Curva ROC/AUC', 'F1 Score', 'Acurácia'], :],
-    props='background-color: #d4edda;'
-), use_container_width=True)
+with col_comp1:
+    st.subheader("Tabela de Performance e Parcimônia")
+    st.markdown("O modelo foi selecionado com base no $\mathbf{RMSE}$ (erro de previsão) e $\mathbf{AIC/BIC}$ (parcimônia).")
+    
+    st.dataframe(df_comparison.style.format('{:.4f}').highlight_min(
+        axis=1, 
+        subset=pd.IndexSlice[['RMSE (Teste)', 'AIC', 'BIC', 'RMSE K-fold'], :], 
+        props='background-color: #d4edda;'
+    ).highlight_max(
+        axis=1,
+        subset=pd.IndexSlice[['Curva ROC/AUC', 'F1 Score', 'Acurácia'], :],
+        props='background-color: #d4edda;'
+    ), use_container_width=True)
+
+with col_comp2:
+    st.subheader("Justificativa do Modelo Vencedor")
+    st.markdown(f"""
+    O **Modelo 1** ($\text{{NOTA\_CN, NOTA\_CH, NOTA\_REDACAO}}$) foi o vencedor em **todas** as métricas.
+    - **Predição:** Seu $\mathbf{{RMSE}}$ ($\mathbf{{ {df_comparison.loc['RMSE (Teste)']['Modelo 1 (Vencedor']:.4f} }}$) é o menor, indicando o menor erro de previsão no conjunto de teste.
+    - **Parcimônia:** Embora seja mais complexo, o ganho de $\mathbf{{R^2}}$ fornecido pela $\text{{NOTA\_CH}}$ superou a penalidade de $\mathbf{{AIC/BIC}}$, garantindo que ele seja o modelo mais eficiente.
+    - **Classificação:** O $\mathbf{{AUC}}$ de $\mathbf{{ {df_comparison.loc['Curva ROC/AUC']['Modelo 1 (Vencedor)']:.4f} }}$ demonstra uma capacidade de discriminação (acima/abaixo da média) quase perfeita.
+    """)
 
 st.markdown("---")
 
@@ -281,35 +272,59 @@ st.markdown("---")
 # --- SEÇÃO 3: DIAGNÓSTICO E VALIDAÇÃO MATRICIAL ---
 # --------------------------------------------------------------------------
 
-st.header("3. Dashboard de Diagnóstico e Validação")
+st.header("3. Diagnóstico e Implicações Estatísticas")
 
-col_diag1, col_diag2 = st.columns(2)
+col_diag, col_coefs = st.columns(2)
 
-with col_diag1:
-    st.subheader("Gráficos de Suposições (Modelo 1 - Treino)")
+with col_diag:
+    st.subheader("Análise dos Pressupostos e Curva ROC")
     
-    # Geração dos gráficos de diagnóstico
-    fig_resid, fig_qq = generate_residual_plots(model1_func, Y_train)
+    # Seletor para alternar gráficos
+    modelo_choice = st.radio("Alternar Gráficos de Diagnóstico:", ("Modelo 1", "Modelo 2"))
     
+    if modelo_choice == "Modelo 1":
+        current_model = model1_func
+        current_name = "Modelo 1 (Vencedor)"
+    else:
+        current_model = model2_func
+        current_name = "Modelo 2 (Parcimonioso)"
+        
+    fig_resid, fig_qq = generate_residual_plots(current_model, current_name)
     st.pyplot(fig_resid)
-    st.caption("Resíduos vs. Ajustados: Dispersão em funil indica Heterocedasticidade (tratada via HC3).")
+    st.caption("Resíduos vs. Ajustados: Dispersão em funil indica **Heterocedasticidade**.")
     
     st.pyplot(fig_qq)
-    st.caption("Q-Q Plot: Normalidade aproximada, com caudas pesadas (extremos).")
-
-with col_diag2:
-    st.subheader("Validação Matricial e Curva ROC")
+    st.caption("Q-Q Plot: Resíduos são aproximadamente normais no centro, satisfazendo a robustez para grandes amostras.")
     
-    # Curva ROC
+    # Curva ROC - Fixo para comparação
     auc1 = df_comparison.loc['Curva ROC/AUC', 'Modelo 1 (Vencedor)']
     auc2 = df_comparison.loc['Curva ROC/AUC', 'Modelo 2 (Parcimonioso)']
     fig_roc = generate_roc_curve(Y_test_class, Y1_pred_test, Y2_pred_test, auc1, auc2)
     st.pyplot(fig_roc)
-    st.caption(f"Curva ROC: Modelo 1 (verde) demonstra maior poder de discriminação (AUC = {auc1:.4f}).")
-    
-    st.markdown("##### Coeficientes: Matricial vs. Função")
-    st.markdown("A equivalência prova a correção do Estimador de Mínimos Quadrados ($\mathbf{\hat{\beta}}$).")
-    st.dataframe(df_coefs_ols.T.style.format('{:.6f}'), use_container_width=True)
+    st.caption("Curva ROC: A área sob a curva (AUC) confirma o poder de discriminação do Modelo 1.")
 
-st.markdown("---")
-st.info("✅ O projeto está concluído. O Modelo 1 é a solução mais robusta e preditiva, com validação e correção estatística.")
+
+with col_coefs:
+    st.subheader("Modelo Final e Validação Matricial")
+    
+    st.markdown("##### Coeficientes $\mathbf{\hat{\beta}}$: OLS vs. Matricial")
+    st.markdown(r"O cálculo matricial $\mathbf{\hat{\beta}} = (\mathbf{X}^{\text{T}}\mathbf{X})^{-1}\mathbf{X}^{\text{T}}\mathbf{Y}$ foi validado: os resultados são numericamente idênticos aos das funções Python.")
+    st.dataframe(df_coefs_ols.T.style.format('{:.6f}'), use_container_width=True)
+    
+    st.markdown("##### Implicações para o Modelo Vencedor (Modelo 1):")
+    st.dataframe(pd.DataFrame({
+        'Variável': model1_robust.params.index,
+        'Coeficiente (β̂)': model1_robust.params.values,
+        'Erro Padrão (HC3)': model1_robust.bse.values,
+        'P-valor (Corrigido)': model1_robust.pvalues.values
+    }).style.format({
+        'Coeficiente (β̂)': '{:.4f}',
+        'Erro Padrão (HC3)': '{:.4f}',
+        'P-valor (Corrigido)': '{:.4e}'
+    }), hide_index=True, use_container_width=True)
+
+    st.markdown(r"""
+    **Ressalvas nas Violações:**
+    1. **Heterocedasticidade:** Tratada ativamente. Os $\text{Erros Padrão (HC3)}$ corrigem a inconsistência e **validam a inferência** sobre a significância dos preditores.
+    2. **Multicolinearidade Severa:** ($\mathbf{{VIF \approx 300}}$) Não foi corrigida, mas a **predição** é válida. A instabilidade impede a **interpretação causal e isolada** dos coeficientes. O modelo é excelente para *prever*, mas não para *explicar* o impacto individual.
+    """)
