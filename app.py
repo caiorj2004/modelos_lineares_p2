@@ -294,7 +294,7 @@ with col_comp2:
 st.markdown("---")
 
 # --------------------------------------------------------------------------
-# --- NOVA SEÇÃO 3: APLICAÇÃO E PREDIÇÃO (SOLUÇÃO MATRICIAL) ---
+# --- NOVA SEÇÃO 3: APLICAÇÃO E PREDIÇÃO ---
 # --------------------------------------------------------------------------
 
 st.header("3. Aplicação do Modelo Vencedor (Predição)")
@@ -309,29 +309,17 @@ with col_input1:
     ch_input = st.number_input("Nota Ciências Humanas (CH)", min_value=300.0, max_value=1000.0, value=550.0, step=0.1)
     redacao_input = st.number_input("Nota Redação", min_value=0.0, max_value=1000.0, value=600.0, step=10.0)
 
-# Construir DataFrame de Input
-input_data = pd.DataFrame({
-    'NOTA_CN_CIENCIAS_DA_NATUREZA': [cn_input],
-    'NOTA_CH_CIENCIAS_HUMANAS': [ch_input],
-    'NOTA_REDACAO': [redacao_input]
-})
-# Garantir a ordem exata dos preditores
-input_data = input_data[MODEL1_NAMES]
+# --- NOVA LÓGICA DE PREDIÇÃO ALGEBRICA ---
+# 1. Obter os coeficientes do modelo treinado
+params = model1_func.params
 
-# Adicionar Intercepto e FAZER PREDIÇÃO (usando a Álgebra Matricial)
-input_data_const = sm.add_constant(input_data, prepend=True)
-
-# CRÍTICO: Reindexar para garantir que as colunas 'const', 'NOTA_CN', 'NOTA_CH', 'NOTA_REDACAO'
-# estejam na mesma ordem que o modelo treinado (model1_func.params.index)
-TRAINING_COLUMNS = model1_func.params.index
-input_data_const = input_data_const.reindex(columns=TRAINING_COLUMNS, fill_value=0)
-
-# SOLUÇÃO MATRICIAL: Y_hat = X_new @ Beta_hat
-# Pega os coeficientes do modelo treinado
-beta_hat = model1_func.params.to_numpy()
-# Multiplicação matricial (Produto escalar de matrizes)
-predicted_mt = np.dot(input_data_const.to_numpy(), beta_hat)[0]
-
+# 2. Calcular a previsão usando a fórmula algébrica (imune ao reindex)
+predicted_mt = (
+    params['const'] +
+    params['NOTA_CN_CIENCIAS_DA_NATUREZA'] * cn_input +
+    params['NOTA_CH_CIENCIAS_HUMANAS'] * ch_input +
+    params['NOTA_REDACAO'] * redacao_input
+)
 
 with col_input2:
     st.markdown("##### Resultado da Predição")
@@ -339,7 +327,7 @@ with col_input2:
     st.metric(label="NOTA MT PREVISTA", value=f"{predicted_mt:.2f}")
 
     st.markdown(r"""
-    A previsão é calculada diretamente pela equação de regressão do Modelo 1, utilizando a multiplicação matricial ($\mathbf{\hat{Y}} = \mathbf{X} \cdot \mathbf{\hat{\beta}}$). O erro médio desta estimativa ($\mathbf{RMSE}$) é de **16.84 pontos**.
+    A previsão foi calculada diretamente pela fórmula $\mathbf{\hat{Y} = \mathbf{\hat{\beta}_0} + \mathbf{\hat{\beta}_1}X_1 + \dots}$, utilizando os coeficientes extraídos do modelo treinado. O erro médio desta estimativa ($\mathbf{RMSE}$) é de **16.84 pontos**.
     """)
 
 st.markdown("---")
@@ -415,6 +403,3 @@ with col_coefs:
        - **Problema:** Instabilidade e alta variância dos $\mathbf{\hat{\beta}}$, devido à alta correlação entre as notas.
        - **Solução (Estratégia):** O MQO foi mantido devido ao seu $\mathbf{RMSE}$ superior ao da Regressão Ridge. O modelo deve ser usado **apenas para Previsão**, pois a instabilidade impede a **interpretação causal e isolada** do $\mathbf{\hat{\beta}}$ de cada nota.
     """)
-
-st.markdown("---")
-st.info("✅ O projeto está concluído. A solução final é o Modelo 1 (OLS com Inferência Robusta HC3).")
